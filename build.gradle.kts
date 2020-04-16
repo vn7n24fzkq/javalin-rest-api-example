@@ -30,6 +30,12 @@ dependencies {
 
     // Use the Kotlin JUnit integration.
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+
+    //javalin 3.8
+    implementation("io.javalin:javalin:3.8.0")
+
+    //logger
+    implementation ("org.slf4j:slf4j-simple:1.7.28")
 }
 
 application {
