@@ -12,104 +12,128 @@ import io.javalin.plugin.openapi.annotations.*
 import io.javalin.plugin.openapi.*
 import io.javalin.plugin.openapi.ui.SwaggerOptions
 import io.swagger.v3.oas.models.info.Info
-import io.swagger.v3.oas.models.security.SecurityScheme
 import io.swagger.v3.oas.models.OpenAPI
+import io.javalin.plugin.openapi.ui.ReDocOptions;
 
 enum class AppRole : Role { ANYONE, LOGGED_IN }
 
 data class User(
-    var id:Int,
-    var name:String
+        var id: Int,
+        var name: String
 )
 
- private val openApiOptions: OpenApiOptions
-        get() {
-            val initialConfigurationCreator = {
-                OpenAPI()
-                        .info(Info().version("1.0").description("api").title("Javalin API"))
-            }
-            return OpenApiOptions(initialConfigurationCreator)
-                    .roles(roles(Roles.ANYONE))
-                    .path("/swagger-docs")
-                    .swagger(SwaggerOptions("/swagger").title("Crabo API Documentation"))
+private val openApiOptions: OpenApiOptions
+    get() {
+        val initialConfigurationCreator = {
+            OpenAPI()
+                    .info(Info().version("1.0")
+                    .description("REST API Demo")
+                    .title("Javalin API"))
         }
+        return OpenApiOptions(initialConfigurationCreator)
+                .roles(roles(AppRole.ANYONE))
+                .path("/swagger-docs")
+                .swagger(SwaggerOptions("/swagger").title("API Documentation"))
+    }
+
 fun main(args: Array<String>) {
-    val app = Javalin.create{ config->
-        config.accessManager{ handle,context,role->
-            when{
-                AppRole.ANYONE in role-> handle.handle(context)
-                AppRole.LOGGED_IN in role && context.basicAuthCredentialsExist()->
-                    { handle.handle(context)}
-                else->{context.status(401)}
-
+    val app = Javalin.create { config ->
+        config.registerPlugin(OpenApiPlugin(openApiOptions))
+        config.accessManager { handle, context, role ->
+            when {
+                AppRole.ANYONE in role -> handle.handle(context)
+                AppRole.LOGGED_IN in role && context.basicAuthCredentialsExist() -> {
+                    handle.handle(context)
                 }
-            }
+                else -> {
+                    context.status(401)
+                }
 
-        }.routes{
-            path("users"){
-                get(UserController::getAllUser,roles(AppRole.LOGGED_IN))
-                get(":id",UserController::getUserById)
-                post(UserController::createUser)
-                put(UserController::updateUser)
-                delete(":id",UserController::removeUserById)
             }
-        }.start(7000)
-        app.exception(Exception::class.java){_,ctx->
-            ctx.result("error")
-            ctx.status(500)
+        }
+
+    }.routes {
+        path("users") {
+            get(UserController::getAllUser, roles(AppRole.LOGGED_IN))
+            get(":id", UserController::getUserById)
+            post(UserController::createUser)
+            put(UserController::updateUser)
+            delete(":id", UserController::removeUserById)
+        }
+    }.start(7000)
+    app.exception(Exception::class.java) { _, ctx ->
+        ctx.result("error")
+        ctx.status(500)
+    }
+}
+
+
+val users = hashMapOf(
+        1 to User(id = 1, name = "Android"),
+        2 to User(id = 2, name = "Java"),
+        3 to User(id = 3, name = "Kotlin")
+)
+
+object UserController {
+
+    fun createUser(ctx: Context) {
+        ctx.bodyValidator<User>().get().apply {
+            if (!users.containsKey(this.id))
+                users[this.id] = this
+            else
+                ctx.status(400)
         }
     }
 
-
-    val users = hashMapOf(
-        1 to User(id=1,name="Android"),
-        2 to User(id=2,name="Java"),
-        3 to User(id=3,name="Kotlin")
-    )
-
-    object UserController{
-
-        fun createUser(ctx:Context){
-            ctx.bodyValidator<User>().get().apply{ 
-                if(!users.containsKey(this.id))
-                users.put(this.id,this)
-                else
-                ctx.status(400)
-            }
-        }
-
-        @OpenApi(
-            requestBody = OpenApiRequestBody(User::class),
+    @OpenApi(
             responses = [
-            OpenApiResponse("400", Unit::class),
-            OpenApiResponse("201", Unit::class)
+                OpenApiResponse("400"),
+                OpenApiResponse("200")])
             ]
-        )
-        fun getAllUser(ctx:Context){
-            ctx.json(users.values)
-        }
+    )
+    fun getAllUser(ctx: Context) {
+        ctx.json(users.values)
+    }
 
-        fun getUserById(ctx:Context){
-            val user = users.get(
+    @OpenApi(
+            responses = [
+                OpenApiResponse("400"),
+                OpenApiResponse("200", content = [
+                    OpenApiContent(User::class)])
+            ]
+    )
+    fun getUserById(ctx: Context) {
+        val user = users.get(
                 ctx.pathParam("id").toInt()
-            )
-            user?.let{
-                ctx.json(it)
-            }?:ctx.status(400)
-        }
+        )
+        user?.let {
+            ctx.json(it)
+        } ?: ctx.status(400)
+    }
 
-        fun removeUserById(ctx:Context){
-            val id = ctx.pathParam("id").toInt()
-            users.remove(id)
-        }
+    @OpenApi(
+            responses = [
+                OpenApiResponse("200")
+            ]
+    )
+    fun removeUserById(ctx: Context) {
+        val id = ctx.pathParam("id").toInt()
+        users.remove(id)
+    }
 
-        fun updateUser(ctx:Context){
-            ctx.bodyValidator<User>().get().apply{ 
-                if(users.containsKey(this.id))
-                users.put(this.id,this)
-                else
+    @OpenApi(
+            responses = [
+                OpenApiResponse("400"),
+                OpenApiResponse("200")])
+            ]
+    )
+    fun updateUser(ctx: Context) {
+        ctx.bodyValidator<User>().get().apply {
+            if (users.containsKey(this.id))
+                users.put(this.id, this)
+            else
                 ctx.status(400)
-            }
         }
     }
+}
 
