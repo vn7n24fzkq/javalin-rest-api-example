@@ -13,7 +13,8 @@ import io.javalin.plugin.openapi.*
 import io.javalin.plugin.openapi.ui.SwaggerOptions
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.OpenAPI
-import io.javalin.plugin.openapi.ui.ReDocOptions;
+import io.javalin.http.*
+import org.eclipse.jetty.http.HttpStatus
 
 enum class AppRole : Role { ANYONE, LOGGED_IN }
 
@@ -62,8 +63,16 @@ fun main(args: Array<String>) {
         }
     }.start(7000)
     app.exception(Exception::class.java) { _, ctx ->
-        ctx.result("error")
-        ctx.status(500)
+        ctx.result("error").status(HttpStatus.INTERNAL_SERVER_ERROR_500)
+    }
+    app.exception(BadRequestResponse::class.java){_,ctx-> 
+            ctx.result("Error").status(HttpStatus.BAD_REQUEST_400)
+    }
+    app.exception(ForbiddenResponse::class.java){_,ctx->
+            ctx.result("you should not pass").status(HttpStatus.FORBIDDEN_403)
+    }
+    app.exception(NotFoundResponse::class.java) { _, ctx ->
+            ctx.result("here is nothing").status(HttpStatus.NOT_FOUND_404)
     }
 }
 
@@ -88,7 +97,7 @@ object UserController {
     @OpenApi(
             responses = [
                 OpenApiResponse("400"),
-                OpenApiResponse("200")])
+                OpenApiResponse("200")
             ]
     )
     fun getAllUser(ctx: Context) {
@@ -124,7 +133,7 @@ object UserController {
     @OpenApi(
             responses = [
                 OpenApiResponse("400"),
-                OpenApiResponse("200")])
+                OpenApiResponse("200")
             ]
     )
     fun updateUser(ctx: Context) {

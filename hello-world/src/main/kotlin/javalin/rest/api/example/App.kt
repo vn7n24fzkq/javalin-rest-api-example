@@ -4,6 +4,10 @@
 package javalin.rest.api.example
 
 import io.javalin.Javalin
+import io.javalin.core.security.Role
+import io.javalin.core.security.SecurityUtil.roles
+import io.javalin.apibuilder.ApiBuilder.*
+import io.javalin.http.Context
 
 fun main(args: Array<String>) {
     val app = Javalin.create().start(7000)
