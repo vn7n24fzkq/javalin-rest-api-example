@@ -8,8 +8,15 @@ import io.javalin.core.security.Role
 import io.javalin.core.security.SecurityUtil.roles
 import io.javalin.apibuilder.ApiBuilder.*
 import io.javalin.http.Context
+import io.javalin.plugin.openapi.annotations.*
+import io.javalin.plugin.openapi.*
+import io.javalin.plugin.openapi.ui.SwaggerOptions
+import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.OpenAPI
+import io.javalin.http.*
+import org.eclipse.jetty.http.HttpStatus
+
 
 fun main(args: Array<String>) {
-    val app = Javalin.create().start(7000)
-    app.get("/") { ctx -> ctx.result("Hello World") }
+
 }
